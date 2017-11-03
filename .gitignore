@@ -1,0 +1,12 @@
+.metadata/
+MessengerSystem/.classpath
+MessengerSystem/.project
+MessengerSystem/.settings/
+MessengerSystem/bin/
+MessengerSystem/src/Client.class
+MessengerSystem/src/Message.class
+MessengerSystem/src/MessengeringSystem.class
+MessengerSystem/src/Server.class
+MessengerSystem/src/Server.class
+RemoteSystemsTempFiles/
+MessengerSystem/src/Server$1.class
