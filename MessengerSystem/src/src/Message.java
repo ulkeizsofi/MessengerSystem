@@ -2,6 +2,7 @@
 
 abstract  class Message{
 	private final String msg;
+//	private final 
     // A message to a client.
 	
 	public Message(String msg) {

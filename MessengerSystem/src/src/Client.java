@@ -6,12 +6,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import javax.swing.text.html.HTMLDocument.HTMLReader.IsindexAction;
+
 
 public class Client{
 	
 	
 //	private volatile boolean stop = false;
-    private final BlockingQueue<MessageQueues> messageQueue = new ArrayBlockingQueue<MessageQueues>(100);
+    private final BlockingQueue<Message> messageQueue = new ArrayBlockingQueue<Message>(100);
     private AtomicInteger id;
     private final Server server;
     private String topic = null;
@@ -22,44 +24,89 @@ public class Client{
 //      this.messageQueue = messageQueue;
     	this.server = server;
     	this.server.addClient(this);
+    	startClient();
     }
     
+
     public Client(int id, Server server, String topic) {
     	this.id = new AtomicInteger(id);
 //      this.messageQueue = messageQueue;
     	this.server = server;
     	this.topic = topic;
     	this.server.addClient(this);
+    	startClient();
     }
+    
+    private void startClient() {
+    	new Thread(new Runnable() {
+
+    		@Override
+    		public void run() {
+
+    			try {
+    				while(true) {
+    					Message message = messageQueue.take();
+    					
+    					if (message instanceof DirectMessage) {
+    						processMessage((DirectMessage)message);
+
+    					}
+    					else {
+    						if (message instanceof TopicMessage) {
+    							processMessage((TopicMessage)message);
+    						}
+    					}
+    				}
+
+    			} catch (InterruptedException e) {
+    				// TODO Auto-generated catch block
+    				e.printStackTrace();
+    			}
+    		}
+    	}).start();
+    }
+    
     
     public int getID() {
     	return id.intValue();
     }
     
-    public void receiveMessage(MessageQueues message) {
+    public void receiveMessage(Message message) throws InterruptedException {
+    
+    	messageQueue.put(message);
+
+    }
+    
+    public void processMessage(DirectMessage message) {
     	System.out.println("Received message: " + message );
     }
     
-    public void receiveMessage(MessageTopics message) throws InterruptedException {
+    public void processMessage(TopicMessage message) throws InterruptedException {
     	
-    	String actualTopic = null;
-    	lock.readLock().lock();
-	    try {
-	    	if (topic != null) {
-	    		actualTopic = new String(topic);
-	    
-	    	}
+//    	String actualTopic = null;
+//    	lock.readLock().lock();
+//	    try {
+//	    	if (topic != null) {
+//	    		actualTopic = new String(topic);
+//	    
+//	    	}
 	        
-	    } finally {
-	        lock.readLock().unlock();
-	    }
-	    
-	    if (actualTopic == null) {
-	    	return;
-	    }
-	    if (actualTopic.equals(message.getTopic())) {
-	    	System.out.println("Received message" + message);
-	    }
+//	    } finally {
+//	        lock.readLock().unlock();
+//	    }
+//	    
+//	    if (actualTopic == null) {
+//	    	return;
+//	    }
+//	    if (actualTopic.equals(message.getTopic())) {
+//	    	System.out.println("Received message" + message);
+//	    }
+    	
+    	if (topic != null) {
+    		if (topic.equals(message.getTopic())) {
+    			System.out.println("Received message: " + message);
+    		}
+    	}
     }
     
     public void sendToServer(Message message) throws InterruptedException {
@@ -67,16 +114,6 @@ public class Client{
     	server.receiveMessage(message);
     }
     
-	
-	public MessageQueues getNextFromQueue() throws InterruptedException{
-		while (messageQueue.size()==0)
-			synchronized(messageQueue) {
-				messageQueue.wait();
-			}  
-	    MessageQueues message = (MessageQueues) messageQueue.element();
-	    messageQueue.remove(message);
-	    return message;
-	}
 	
 	public String toString() {
 		return "client " + id + " " + topic;

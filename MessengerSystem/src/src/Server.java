@@ -47,12 +47,12 @@ public class Server {
 							while (true) {
 								
 								Message message = getNextFromQueue();
-								if (message instanceof MessageQueues)
-									sendToClient((MessageQueues)message);
+								if (message instanceof DirectMessage)
+									sendToClient((DirectMessage)message);
 								else {
-									if (message instanceof MessageTopics) {
+									if (message instanceof TopicMessage) {
 										
-										sendToClient((MessageTopics)message);
+										sendToClient((TopicMessage)message);
 									}
 								}
 							}
@@ -97,18 +97,18 @@ public class Server {
 	private void addMessageToQueue(Message message) throws InterruptedException {
 		
 		messageQueue.add(message);
-		if (message instanceof MessageQueues) {
+		if (message instanceof DirectMessage) {
 			return;
 		}
-		if (message instanceof MessageTopics) {
+		if (message instanceof TopicMessage) {
 		
 			new Thread(new Runnable() {
 				
 				@Override
 				public void run() {
 					try {
-						System.out.println("START");
-						Thread.sleep(0);
+						
+						Thread.sleep(((TopicMessage) message).getTime());
 						synchronized(messageQueue) {
 							if (messageQueue.remove(message)) {
 								System.out.println("Out of time, message deleted: " + message);
@@ -148,8 +148,7 @@ public class Server {
 //		}
 	}
 	
-	public void sendToClient(MessageQueues message) {
-		synchronized(messageQueue) {
+	public void sendToClient(DirectMessage message) throws InterruptedException {
 			
 	
 			Client client = mClients.get(message.getID());	
@@ -159,29 +158,22 @@ public class Server {
 				client.receiveMessage(message);
 			}
 			
-		}
 	}
 	
 
-	public void sendToClient(MessageTopics message) throws InterruptedException {
+	public void sendToClient(TopicMessage message) throws InterruptedException {
 		
 		broadcast(message);
 	}
 	
 	public Message getNextFromQueue() throws InterruptedException{
-		while (messageQueue.size()==0) {
-			
-	         synchronized(messageQueue) {
-	        	 messageQueue.wait();
-	         }
-		}
 		
-	    Message message = (Message) messageQueue.element();
-	    messageQueue.remove(message);
+	    Message message = (Message) messageQueue.take();
+	    Thread.sleep(7);
 	    return message;
 	}
 	
-	public void broadcast(MessageTopics message) throws InterruptedException {
+	public void broadcast(TopicMessage message) throws InterruptedException {
 		synchronized (mClients) {
 			for(Client client : mClients.values()) {
 				client.receiveMessage(message);
