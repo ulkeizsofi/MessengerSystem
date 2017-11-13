@@ -1,9 +1,18 @@
-import java.util.concurrent.atomic.AtomicInteger;
+
 
 abstract  class Message{
+	private final String msg;
     // A message to a client.
-    abstract public String getMessage() ;
-    abstract public String toString() ;
-    abstract public AtomicInteger getTime();  
-	abstract public String getType();
+	
+	public Message(String msg) {
+		 this.msg = msg;
+	}
+	
+    public String getMessage() {
+    	return msg;
+    }
+
+    public String toString() {
+      return msg;
+    }
 }

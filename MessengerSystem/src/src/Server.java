@@ -1,8 +1,6 @@
-package src;
 
-
-import java.util.Map;
-import java.util.Vector;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
@@ -17,8 +15,8 @@ public class Server {
 	private static final int maxMessages = 100;
 	private final BlockingQueue<Message> messageQueue = new ArrayBlockingQueue<Message>(maxMessages);
 	ReadWriteLock lock = new ReentrantReadWriteLock();
-	
-	private final ConcurrentMap<AtomicInteger, Client> mClients = new ConcurrentHashMap<AtomicInteger, Client>();
+//	private final BlockingQueue<Timer> timerQueue = new ArrayBlockingQueue<Timer>(maxMessages);
+	private final ConcurrentMap<Integer, Client> mClients = new ConcurrentHashMap<Integer, Client>();
 	 
     /**
      * Adds given client to the server's client list.
@@ -47,31 +45,45 @@ public class Server {
 						
 						try {
 							while (true) {
-								MessageQueues message = (MessageQueues) getNextFromQueue();
-								Client client = mClients.get(message.getID());
-								sendToClient(client, message);
+								
+								Message message = getNextFromQueue();
+								if (message instanceof MessageQueues)
+									sendToClient((MessageQueues)message);
+								else {
+									if (message instanceof MessageTopics) {
+										
+										sendToClient((MessageTopics)message);
+									}
+								}
 							}
 						}
 						catch (Exception e) {
 							// TODO: handle exception
+							System.out.println("ERROR"+ e);
 						}
 					}
 				}).start();
 	}
 	
-	public Boolean receiveMessage(Message msg) {
+	public Boolean receiveMessage(Message msg) throws InterruptedException {
 		int noActualMessages;
 		lock.readLock().lock();
 	    try {
+	    	
 	        noActualMessages = noMessages;
+	        
 	    } finally {
 	        lock.readLock().unlock();
 	    }
 	    if (noActualMessages < maxMessages - 1) {
-	    	messageQueue.add(msg);
+	    	addMessageToQueue(msg);
 	    	lock.writeLock().lock();
 	        try {
 	            noMessages++;
+	            synchronized(messageQueue) {
+	            	messageQueue.notify();
+	            }
+	       
 	        } finally {
 	            lock.writeLock().unlock();
 	        }
@@ -82,16 +94,99 @@ public class Server {
 	    }
 	}
 	
-	public void sendToClient(Client client, Message message) {
-		client.receiveMessage(message);
+	private void addMessageToQueue(Message message) throws InterruptedException {
+		
+		messageQueue.add(message);
+		if (message instanceof MessageQueues) {
+			return;
+		}
+		if (message instanceof MessageTopics) {
+		
+			new Thread(new Runnable() {
+				
+				@Override
+				public void run() {
+					try {
+						System.out.println("START");
+						Thread.sleep(0);
+						synchronized(messageQueue) {
+							if (messageQueue.remove(message)) {
+								System.out.println("Out of time, message deleted: " + message);
+							}
+						}
+					} catch (InterruptedException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+					
+				}
+			}).start();
+		}
+//		if (message instanceof MessageQueues) {
+//			return;
+//		}
+//		if (message instanceof MessageTopics) {
+//			Timer timer = new Timer();
+//	
+//		    timer.cancel(); //this will cancel the current task. if there is no active task, nothing happens
+//		    timer = new Timer();
+//	
+//		    TimerTask action = new TimerTask() {
+//		        public void run() {
+//		            synchronized(messageQueue) {
+//		            	if (messageQueue.remove(message)) {
+//		            		System.out.println("DELETED: "+ message);
+//		            	}
+//		            }
+//		        }
+//	
+//		    };
+//
+//
+//		    timer.schedule(action, ((MessageTopics)message).getTime()); //this starts the task
+//	    	timerQueue.put(timer);
+//		}
+	}
+	
+	public void sendToClient(MessageQueues message) {
+		synchronized(messageQueue) {
+			
+	
+			Client client = mClients.get(message.getID());	
+			if (client == null){
+	//									      return map.put(key, value);
+			} else{
+				client.receiveMessage(message);
+			}
+			
+		}
+	}
+	
+
+	public void sendToClient(MessageTopics message) throws InterruptedException {
+		
+		broadcast(message);
 	}
 	
 	public Message getNextFromQueue() throws InterruptedException{
-		while (messageQueue.size()==0)
-	           wait();
+		while (messageQueue.size()==0) {
+			
+	         synchronized(messageQueue) {
+	        	 messageQueue.wait();
+	         }
+		}
+		
 	    Message message = (Message) messageQueue.element();
 	    messageQueue.remove(message);
 	    return message;
+	}
+	
+	public void broadcast(MessageTopics message) throws InterruptedException {
+		synchronized (mClients) {
+			for(Client client : mClients.values()) {
+				client.receiveMessage(message);
+			}
+		}
 	}
 	
 }

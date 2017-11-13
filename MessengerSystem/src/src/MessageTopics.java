@@ -1,37 +1,31 @@
-package src;
+
 
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class MessageTopics extends Message{
+public final class MessageTopics extends Message{
 
 
-		  final String msg , topic , type;
-		  final AtomicInteger time;
+		  private final String topic;
+		  private final AtomicInteger time;
 		  
-		  public MessageTopic(String msg,String topic , int time)
+		  public MessageTopics(String msg,String topic , int time)
 		  {
-			  this.msg  = msg ;
+			  super(msg);
 			  this.topic  = topic;
 			  this.time =new AtomicInteger(time);
-			  this.type="Topic";
 			  
 		  }
-
-		  public String getMessage() {
-		    	return msg;
-		    }
 			  
-		  public AtomicInteger getTime()
+		  public int getTime()
 		  {
-			  return this.time;
+			  return this.time.intValue();
 		  }
 		  
-		  public String getType()
-		  {
-			  return this.type;
+		  public String getTopic() {
+			  return this.topic;
 		  }
 
 		  public String toString() {
-		      return msg;
-		    }
+		      return super.toString() + " " + time + " " + topic;
+		  }
 }
