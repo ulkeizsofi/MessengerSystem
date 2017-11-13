@@ -1,3 +1,5 @@
+package src;
+
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -8,7 +10,7 @@ public class Client implements Runnable {
 	
 	
 	private volatile boolean stop = false;
-    private final BlockingQueue<Message> messageQueue = new ArrayBlockingQueue<Message>(100);
+    private final BlockingQueue<MessageQueues> messageQueue = new ArrayBlockingQueue<MessageQueues>(100);
     private AtomicInteger id;
     private final Server server;
 
@@ -22,13 +24,15 @@ public class Client implements Runnable {
     	return id;
     }
     
+    public void receiveMessage(Message message) {
+    	System.out.println("Received message: " + message );
+    }
+    
     public void sendToServer(Message message) {
     	server.receiveMessage(message);
     }
     
-    public void receiveMessage(Message message) {
-    	System.out.println("Received message: " + message);
-    }
+    
     
 	@Override
 	public void run() {
@@ -44,10 +48,10 @@ public class Client implements Runnable {
 		
 	}
 	
-	public Message getNextFromQueue() throws InterruptedException{
+	public MessageQueues getNextFromQueue() throws InterruptedException{
 		while (messageQueue.size()==0)
 	           wait();
-	    Message message = (Message) messageQueue.element();
+	    MessageQueues message = (MessageQueues) messageQueue.element();
 	    messageQueue.remove(message);
 	    return message;
 	}

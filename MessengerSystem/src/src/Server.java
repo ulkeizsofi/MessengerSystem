@@ -1,3 +1,6 @@
+package src;
+
+
 import java.util.Map;
 import java.util.Vector;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -44,7 +47,7 @@ public class Server {
 						
 						try {
 							while (true) {
-								Message message = getNextFromQueue();
+								MessageQueues message = (MessageQueues) getNextFromQueue();
 								Client client = mClients.get(message.getID());
 								sendToClient(client, message);
 							}
